@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEJARAH MONOPOLY - The Race</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #f97316; /* Player 1 (Orange 600) */
+            --color-accent: #22c55e; /* Green 500 */
+            --color-bg: #f8fafc; /* Slate 50 */
+            --tile-discipline: #fee2e2; /* Red 100 for Discipline Room */
+            --player-color-1: #f97316; /* Orange */
+            --player-color-2: #0ea5e9; /* Sky Blue */
+            --player-color-3: #facc15; /* Yellow */
+            --player-color-4: #8b5cf6; /* Violet */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-bg);
+            touch-action: manipulation;
+        }
+        .board-grid {
+            /* 5 rows, 10 columns */
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            width: 100%;
+            max-width: 450px; 
+            aspect-ratio: 10 / 5;
+            margin: auto;
+        }
+        .tile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 0.6rem;
+            border: 1px solid #cbd5e1;
+            transition: all 0.3s ease;
+            cursor: default;
+            user-select: none;
+            position: relative;
+            background-color: #ffffff;
+            padding: 2px;
+            text-align: center;
+        }
+        .tile-number {
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+        .tile-content {
+            font-size: 0.5rem;
+            line-height: 1.1;
+            margin-top: 15px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .discipline-tile {
+            background-color: var(--tile-discipline);
+            border-color: #ef4444;
+        }
+        .start-tile {
+            background-color: var(--color-accent);
+            color: white;
+        }
+        .win-tile {
+            background-color: #0ea5e9;
+            color: white;
+            font-size: 0.9rem;
+        }
+        
+        .player-tokens-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 2px;
+        }
+        .player-token {
+            width: 30%;
+            height: 30%;
+            border-radius: 50%;
+            z-index: 10;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            margin: 1px;
+            border: 1px solid white; 
+        }
+        .current-turn-highlight {
+            border: 3px solid black;
+            transform: scale(1.2);
+        }
+        
+        /* Player specific colors */
+        .player-token[data-player-id="1"] { background-color: var(--player-color-1); }
+        .player-token[data-player-id="2"] { background-color: var(--player-color-2); }
+        .player-token[data-player-id="3"] { background-color: var(--player-color-3); }
+        .player-token[data-player-id="4"] { background-color: var(--player-color-4); }
+
+        .dice {
+            font-size: 2.5rem;
+            width: 6rem;
+            height: 6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1rem;
+            background-color: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.1s;
+        }
+        .roll-animation {
+            animation: roll 0.5s cubic-bezier(.17,.67,.83,.67) forwards;
+        }
+        @keyframes roll {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+    </style>
+</head>
+<body class="p-4 flex flex-col min-h-screen">
+
+    <!-- Main Game Container -->
+    <div class="flex flex-col items-center flex-grow">
+        <h1 class="text-3xl font-extrabold text-gray-800 mb-2 mt-4">SEJARAH MONOPOLY</h1>
+        
+        <!-- Game Status and Current Player -->
+        <p id="game-message" class="text-lg text-gray-600 mb-2 text-center h-8">Board size is 50 tiles. Race to CELIK SEJARAH!</p>
+        <div id="turn-indicator" class="font-bold text-xl mb-4 h-8"></div>
+
+        <!-- Game Board (5x10 Grid, Serpentine Layout) -->
+        <div id="board" class="board-grid grid rounded-xl shadow-2xl overflow-hidden border-4 border-gray-300">
+            <!-- Tiles will be generated here by JavaScript -->
+        </div>
+
+        <!-- Controls and Dice -->
+        <div class="flex flex-col items-center mt-8 space-y-4 w-full max-w-sm">
+
+            <!-- Dice Display -->
+            <div id="dice-container" class="dice border-2 border-gray-300">
+                <span id="dice-value" class="text-gray-400">?</span>
+            </div>
+
+            <!-- Roll Button -->
+            <button id="roll-button" class="w-full py-3 px-6 text-xl font-bold rounded-full text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 transition shadow-lg shadow-green-500/50" onclick="handleRoll()">
+                Roll Dice
+            </button>
+            
+            <!-- Manual Movement Controls -->
+            <div class="flex space-x-4 w-full justify-center">
+                <button id="move-backward-button" class="flex-1 py-2 px-4 text-md font-semibold rounded-full text-white bg-red-500 hover:bg-red-600 disabled:bg-gray-400 transition" onclick="handleManualMove(-1)">
+                    Manual Move -1
+                </button>
+                <button id="move-forward-button" class="flex-1 py-2 px-4 text-md font-semibold rounded-full text-white bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 transition" onclick="handleManualMove(1)">
+                    Manual Move +1
+                </button>
+            </div>
+
+            <!-- Player Management Buttons -->
+            <div class="flex space-x-4 w-full justify-center">
+                <button id="add-player-button" class="flex-1 py-2 px-4 text-md font-semibold rounded-full text-white bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-400 transition" onclick="addPlayer()">
+                    + Add Player
+                </button>
+                <button id="reset-button" class="flex-1 py-2 px-4 text-sm font-semibold rounded-full text-red-500 border border-red-500 hover:bg-red-50" onclick="resetGame()">
+                    Reset Game
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global game state (local copy)
+        window.gameState = {
+            players: [{ id: 1, name: "Player 1", position: 1, color: "var(--player-color-1)" }],
+            currentPlayerIndex: 0, // Index into the players array
+            nextPlayerId: 2,
+            message: "Roll the dice to begin!",
+            isRolling: false,
+            boardSize: 50, // Updated board size
+            maxPlayers: 4
+        };
+
+        const PLAYER_COLORS = [
+            "var(--player-color-1)",
+            "var(--player-color-2)",
+            "var(--player-color-3)",
+            "var(--player-color-4)"
+        ];
+        
+        // Transcribed tile content from the uploaded image (Tile 1 to 50)
+        const TILE_CONTENT = [
+            "", // Index 0 (unused)
+            "MASUK KELAS",
+            "",
+            "PERANG DUNIA KE - 2 TANAH MELAYU",
+            "RUJUK BUKU",
+            "",
+            "KUASA BRITISH TANAH MELAYU",
+            "BILIK DISPLIN",
+            "",
+            "MALAYAN UNION",
+            "", // 10
+            "BILIK DISPLIN", // 11
+            "BROOKE SARAWAK",
+            "",
+            "BILIK DISPLIN",
+            "",
+            "RUJUK BUKU",
+            "SBBU SABAH",
+            "PTM 1948",
+            "",
+            "BILIK DISPLIN", // 20
+            "RUJUK BUKU", // 21
+            "KOMUNIS 1948",
+            "",
+            "BILIK DISPLIN",
+            "RUJUK BUKU",
+            "",
+            "SISTEM AHLI",
+            "",
+            "RUJUK BUKU",
+            "BILIK DISPLIN", // 30
+            "PENYATA RAZAK 1956", // 31
+            "",
+            "PILIHANRAYA PERTAMA 1955",
+            "BILIK DISPLIN",
+            "",
+            "RUJUK BUKU",
+            "RUNDINGAN KEMERDEKAAN",
+            "",
+            "BILIK DISPLIN",
+            "", // 40
+            "RUJUK BUKU", // 41
+            "",
+            "RUNDINGAN KEMERDEKAAN",
+            "BILIK DISPLIN",
+            "",
+            "PEMASYHURAN KEMERDEKAAN",
+            "",
+            "RUJUK BUKU",
+            "BILIK DISPLIN",
+            "CELIK SEJARAH" // 50 (WIN)
+        ];
+
+        // --- BOARD LAYOUT LOGIC (5 ROWS, 10 COLUMNS, SERPENTINE) ---
+        const ROWS = 5;
+        const COLS = 10;
+
+        const getTileNumberFromIndex = (index) => {
+            const row = Math.floor(index / COLS);
+            const col = index % COLS;
+            
+            const reversedRow = ROWS - 1 - row;
+            
+            const base = reversedRow * COLS;
+            let finalTileNumber;
+            
+            if (reversedRow % 2 === 0) { 
+                // Bottom row (0), row 2, row 4 are left-to-right
+                finalTileNumber = base + col + 1;
+            } else { 
+                // Row 1, row 3 are right-to-left
+                finalTileNumber = base + COLS - col;
+            }
+            return finalTileNumber;
+        };
+
+        const generateBoard = () => {
+            const boardEl = document.getElementById('board');
+            if (!boardEl) return;
+            
+            boardEl.innerHTML = '';
+            for (let i = 0; i < gameState.boardSize; i++) {
+                const tileNumber = getTileNumberFromIndex(i);
+                const tileContent = TILE_CONTENT[tileNumber] || '';
+                
+                const tileDiv = document.createElement('div');
+                tileDiv.id = `tile-${tileNumber}`;
+                
+                let tileClasses = 'tile bg-white';
+                if (tileNumber === 1) tileClasses += ' start-tile';
+                if (tileNumber === gameState.boardSize) tileClasses += ' win-tile';
+                
+                if (tileContent.includes('DISPLIN')) {
+                    tileClasses += ' discipline-tile';
+                }
+
+                tileDiv.className = tileClasses;
+                
+                // Add the token container inside the tile
+                tileDiv.innerHTML = `
+                    <span class="tile-number">${tileNumber}</span>
+                    <div id="tokens-${tileNumber}" class="player-tokens-container"></div>
+                    <div class="tile-content">${tileContent}</div>
+                `;
+
+                boardEl.appendChild(tileDiv);
+            }
+        };
+
+        const updateBoardUI = () => {
+            // 1. Clear all player tokens
+            document.querySelectorAll('.player-tokens-container').forEach(c => c.innerHTML = '');
+
+            // 2. Place tokens for all players
+            gameState.players.forEach((player, index) => {
+                const tokensContainer = document.getElementById(`tokens-${player.position}`);
+                if (tokensContainer) {
+                    const playerEl = document.createElement('div');
+                    playerEl.className = 'player-token transition-all duration-300';
+                    playerEl.setAttribute('data-player-id', player.id);
+                    playerEl.style.backgroundColor = player.color;
+                    
+                    if (index === gameState.currentPlayerIndex) {
+                        playerEl.classList.add('current-turn-highlight');
+                    }
+                    tokensContainer.appendChild(playerEl);
+                }
+            });
+
+            // 3. Update messages and controls
+            document.getElementById('game-message').textContent = gameState.message;
+            document.getElementById('roll-button').disabled = gameState.isRolling;
+            
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            if (currentPlayer) {
+                 document.getElementById('turn-indicator').innerHTML = `
+                    <span class="text-sm">Current Turn:</span> 
+                    <span style="color:${currentPlayer.color};">${currentPlayer.name}</span>
+                `;
+            }
+
+            // 4. Update Add Player button
+            const addButton = document.getElementById('add-player-button');
+            if (gameState.players.length >= gameState.maxPlayers) {
+                addButton.disabled = true;
+                addButton.textContent = `Max Players (${gameState.players.length})`;
+            } else {
+                addButton.disabled = false;
+                addButton.textContent = `+ Add Player (${gameState.players.length + 1})`;
+            }
+
+            // 5. Update Manual Move buttons (disable if a winner is found)
+            const isWinner = currentPlayer?.position === gameState.boardSize;
+            document.getElementById('move-forward-button').disabled = gameState.isRolling || isWinner;
+            document.getElementById('move-backward-button').disabled = gameState.isRolling || isWinner;
+        };
+        
+        // --- MANUAL MOVEMENT LOGIC ---
+        window.handleManualMove = (direction) => {
+            if (gameState.isRolling || gameState.players.length === 0) return;
+
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            
+            if (currentPlayer.position === gameState.boardSize) {
+                gameState.message = `${currentPlayer.name} already won!`;
+                updateBoardUI();
+                return;
+            }
+
+            let newPosition = currentPlayer.position + direction;
+            let message = `${currentPlayer.name} manually moved ${direction > 0 ? 'forward' : 'backward'} by 1.`;
+
+            newPosition = Math.max(1, Math.min(gameState.boardSize, newPosition));
+
+            if (newPosition === currentPlayer.position) {
+                gameState.message = `Cannot move further ${direction > 0 ? 'forward' : 'backward'}.`;
+                updateBoardUI();
+                return;
+            }
+
+            currentPlayer.position = newPosition;
+
+            if (currentPlayer.position === gameState.boardSize) {
+                message = `🎉 ${currentPlayer.name} manually reached the end and WINS! 🎉`;
+            }
+
+            gameState.message = message;
+            
+            updateBoardUI();
+        };
+
+        // --- GAME LOGIC (DICE ROLL) ---
+
+        const rollDice = () => Math.floor(Math.random() * 6) + 1;
+
+        window.addPlayer = () => {
+            if (gameState.players.length >= gameState.maxPlayers) return;
+
+            const newPlayerId = gameState.nextPlayerId;
+            const newPlayer = {
+                id: newPlayerId,
+                name: `Player ${newPlayerId}`,
+                position: 1,
+                color: PLAYER_COLORS[(newPlayerId - 1) % PLAYER_COLORS.length]
+            };
+
+            gameState.players.push(newPlayer);
+            gameState.nextPlayerId++;
+            gameState.message = `${newPlayer.name} joined the game!`;
+            
+            updateBoardUI();
+        };
+
+        window.handleRoll = () => {
+            if (gameState.isRolling || gameState.players.length === 0) return;
+            
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            if (currentPlayer.position === gameState.boardSize) {
+                gameState.message = `${currentPlayer.name} already won!`;
+                return;
+            }
+
+            gameState.isRolling = true;
+            document.getElementById('roll-button').disabled = true;
+            
+            const diceContainer = document.getElementById('dice-container');
+            const diceValueEl = document.getElementById('dice-value');
+            
+            // Dice animation
+            diceContainer.classList.add('roll-animation');
+            let roll = 0;
+            const rollInterval = setInterval(() => {
+                diceValueEl.textContent = Math.floor(Math.random() * 6) + 1;
+            }, 100);
+
+            // Wait for roll animation
+            setTimeout(() => {
+                clearInterval(rollInterval);
+                diceContainer.classList.remove('roll-animation');
+                
+                roll = rollDice();
+                diceValueEl.textContent = roll;
+
+                let oldPosition = currentPlayer.position;
+                let newPosition = oldPosition + roll;
+                let message = `${currentPlayer.name} rolled a ${roll}.`;
+                let advanceTurn = true;
+                
+                if (newPosition > gameState.boardSize) {
+                    message += ` Needs ${gameState.boardSize - oldPosition} to win. Stays at ${oldPosition}.`;
+                    newPosition = oldPosition;
+                } else {
+                    message += ` Moves to tile ${newPosition}.`;
+                }
+
+                currentPlayer.position = newPosition; 
+
+                gameState.message = message;
+                updateBoardUI();
+                
+                if (currentPlayer.position === gameState.boardSize) {
+                    message = `🎉 ${currentPlayer.name} reached the end (CELIK SEJARAH) and WINS! 🎉`;
+                    advanceTurn = false;
+                }
+                
+                if (advanceTurn) {
+                    let turnsChecked = 0;
+                    do {
+                        gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+                        turnsChecked++;
+                    } while(gameState.players[gameState.currentPlayerIndex].position === gameState.boardSize && turnsChecked < gameState.players.length);
+
+                    if (turnsChecked === gameState.players.length && gameState.players.every(p => p.position === gameState.boardSize)) {
+                        message = "Game Over. All players have reached the finish line.";
+                    }
+                }
+
+                gameState.message = message;
+                gameState.isRolling = false;
+                document.getElementById('roll-button').disabled = false;
+                updateBoardUI();
+
+            }, 750);
+        };
+
+        window.resetGame = () => {
+            const initialGameState = {
+                players: [{ id: 1, name: "Player 1", position: 1, color: PLAYER_COLORS[0] }],
+                currentPlayerIndex: 0,
+                nextPlayerId: 2,
+                message: "Game has been reset. Roll to start!",
+                isRolling: false,
+                boardSize: 50,
+            };
+            document.getElementById('dice-value').textContent = "?";
+            Object.assign(gameState, initialGameState);
+            updateBoardUI();
+        };
+
+        // --- IMMEDIATE INITIALIZATION ---
+        // Generates the board and places initial tokens as soon as the window loads.
+        window.addEventListener('load', () => {
+            generateBoard();
+            updateBoardUI();
+        });
+
+    </script>
+</body>
+</html>
