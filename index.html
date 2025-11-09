@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SEJARAH MONOPOLY - The Race</title>
-    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -24,12 +23,11 @@
             touch-action: manipulation;
         }
         .board-grid {
-            /* 5 rows, 10 columns */
             grid-template-columns: repeat(10, 1fr);
             grid-template-rows: repeat(5, 1fr);
             width: 100%;
-            max-width: 450px; 
-            aspect-ratio: 10 / 5;
+            max-width: 600px; 
+            aspect-ratio: 10 / 5; 
             margin: auto;
         }
         .tile {
@@ -91,8 +89,8 @@
             padding: 2px;
         }
         .player-token {
-            width: 30%;
-            height: 30%;
+            width: 18px; 
+            height: 18px; 
             border-radius: 50%;
             z-index: 10;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -134,28 +132,21 @@
 </head>
 <body class="p-4 flex flex-col min-h-screen">
 
-    <!-- Main Game Container -->
     <div class="flex flex-col items-center flex-grow">
         <h1 class="text-3xl font-extrabold text-gray-800 mb-2 mt-4">SEJARAH MONOPOLY</h1>
         
-        <!-- Game Status and Current Player -->
         <p id="game-message" class="text-lg text-gray-600 mb-2 text-center h-8">Board size is 50 tiles. Race to CELIK SEJARAH!</p>
         <div id="turn-indicator" class="font-bold text-xl mb-4 h-8"></div>
 
-        <!-- Game Board (5x10 Grid, Serpentine Layout) -->
         <div id="board" class="board-grid grid rounded-xl shadow-2xl overflow-hidden border-4 border-gray-300">
-            <!-- Tiles will be generated here by JavaScript -->
         </div>
 
-        <!-- Controls and Dice -->
         <div class="flex flex-col items-center mt-8 space-y-4 w-full max-w-sm">
 
-            <!-- Dice Display -->
             <div id="dice-container" class="dice border-2 border-gray-300">
                 <span id="dice-value" class="text-gray-400">?</span>
             </div>
 
-            <!-- Roll Button -->
             <button id="roll-button" class="w-full py-3 px-6 text-xl font-bold rounded-full text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 transition shadow-lg shadow-green-500/50" onclick="handleRoll()">
                 Roll Dice
             </button>
@@ -170,7 +161,6 @@
                 </button>
             </div>
 
-            <!-- Player Management Buttons -->
             <div class="flex space-x-4 w-full justify-center">
                 <button id="add-player-button" class="flex-1 py-2 px-4 text-md font-semibold rounded-full text-white bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-400 transition" onclick="addPlayer()">
                     + Add Player
@@ -183,14 +173,13 @@
     </div>
 
     <script>
-        // Global game state (local copy)
         window.gameState = {
             players: [{ id: 1, name: "Player 1", position: 1, color: "var(--player-color-1)" }],
-            currentPlayerIndex: 0, // Index into the players array
+            currentPlayerIndex: 0,
             nextPlayerId: 2,
             message: "Roll the dice to begin!",
             isRolling: false,
-            boardSize: 50, // Updated board size
+            boardSize: 50,
             maxPlayers: 4
         };
 
@@ -201,7 +190,6 @@
             "var(--player-color-4)"
         ];
         
-        // Transcribed tile content from the uploaded image (Tile 1 to 50)
         const TILE_CONTENT = [
             "", // Index 0 (unused)
             "MASUK KELAS",
@@ -256,7 +244,6 @@
             "CELIK SEJARAH" // 50 (WIN)
         ];
 
-        // --- BOARD LAYOUT LOGIC (5 ROWS, 10 COLUMNS, SERPENTINE) ---
         const ROWS = 5;
         const COLS = 10;
 
@@ -270,10 +257,8 @@
             let finalTileNumber;
             
             if (reversedRow % 2 === 0) { 
-                // Bottom row (0), row 2, row 4 are left-to-right
                 finalTileNumber = base + col + 1;
             } else { 
-                // Row 1, row 3 are right-to-left
                 finalTileNumber = base + COLS - col;
             }
             return finalTileNumber;
@@ -301,7 +286,6 @@
 
                 tileDiv.className = tileClasses;
                 
-                // Add the token container inside the tile
                 tileDiv.innerHTML = `
                     <span class="tile-number">${tileNumber}</span>
                     <div id="tokens-${tileNumber}" class="player-tokens-container"></div>
@@ -313,10 +297,8 @@
         };
 
         const updateBoardUI = () => {
-            // 1. Clear all player tokens
             document.querySelectorAll('.player-tokens-container').forEach(c => c.innerHTML = '');
 
-            // 2. Place tokens for all players
             gameState.players.forEach((player, index) => {
                 const tokensContainer = document.getElementById(`tokens-${player.position}`);
                 if (tokensContainer) {
@@ -332,7 +314,6 @@
                 }
             });
 
-            // 3. Update messages and controls
             document.getElementById('game-message').textContent = gameState.message;
             document.getElementById('roll-button').disabled = gameState.isRolling;
             
@@ -344,7 +325,6 @@
                 `;
             }
 
-            // 4. Update Add Player button
             const addButton = document.getElementById('add-player-button');
             if (gameState.players.length >= gameState.maxPlayers) {
                 addButton.disabled = true;
@@ -354,13 +334,13 @@
                 addButton.textContent = `+ Add Player (${gameState.players.length + 1})`;
             }
 
-            // 5. Update Manual Move buttons (disable if a winner is found)
+       
             const isWinner = currentPlayer?.position === gameState.boardSize;
             document.getElementById('move-forward-button').disabled = gameState.isRolling || isWinner;
             document.getElementById('move-backward-button').disabled = gameState.isRolling || isWinner;
         };
         
-        // --- MANUAL MOVEMENT LOGIC ---
+   
         window.handleManualMove = (direction) => {
             if (gameState.isRolling || gameState.players.length === 0) return;
 
@@ -394,7 +374,6 @@
             updateBoardUI();
         };
 
-        // --- GAME LOGIC (DICE ROLL) ---
 
         const rollDice = () => Math.floor(Math.random() * 6) + 1;
 
@@ -502,8 +481,6 @@
             updateBoardUI();
         };
 
-        // --- IMMEDIATE INITIALIZATION ---
-        // Generates the board and places initial tokens as soon as the window loads.
         window.addEventListener('load', () => {
             generateBoard();
             updateBoardUI();
